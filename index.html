@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>내부용 신살 조회</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 24px;
+      background: #f5f5f5;
+      color: #111;
+    }
+
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+      background: #fff;
+      border: 1px solid #ddd;
+      padding: 24px;
+    }
+
+    h1 {
+      margin-top: 0;
+      font-size: 28px;
+    }
+
+    .desc {
+      margin-bottom: 24px;
+      font-size: 14px;
+      color: #555;
+      line-height: 1.6;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .full {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+
+    input, select, button, textarea {
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      background: #fff;
+    }
+
+    button {
+      cursor: pointer;
+      background: #111;
+      color: #fff;
+      border: none;
+      margin-top: 8px;
+    }
+
+    button:hover {
+      background: #333;
+    }
+
+    .section {
+      margin-top: 28px;
+      padding-top: 20px;
+      border-top: 1px solid #e5e5e5;
+    }
+
+    .result-box {
+      background: #fafafa;
+      border: 1px solid #ddd;
+      padding: 16px;
+      margin-top: 12px;
+      white-space: pre-wrap;
+      line-height: 1.7;
+    }
+
+    .star-item {
+      border: 1px solid #ddd;
+      padding: 12px;
+      margin-top: 10px;
+      background: #fcfcfc;
+    }
+
+    .muted {
+      color: #666;
+      font-size: 13px;
+    }
+
+    .inline-list {
+      margin: 6px 0 0 0;
+      padding-left: 18px;
+    }
+
+    @media (max-width: 700px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>내부용 신살 조회</h1>
+    <div class="desc">
+      생년월일시분과 API 키를 입력하면 원국을 불러와 9개 신살을 계산합니다.<br />
+      기준축은 기본값으로 도화/역마/지살 = <b>일지 기준</b>으로 설정되어 있습니다.
+    </div>
+
+    <div class="grid">
+      <div class="full">
+        <label for="apiKey">API Key</label>
+        <input id="apiKey" type="text" placeholder="여기에 API 키 입력" />
+      </div>
+
+      <div>
+        <label for="year">년도</label>
+        <input id="year" type="number" placeholder="" />
+      </div>
+
+      <div>
+        <label for="month">월</label>
+        <input id="month" type="number" placeholder="" />
+      </div>
+
+      <div>
+        <label for="day">일</label>
+        <input id="day" type="number" placeholder="" />
+      </div>
+
+      <div>
+        <label for="hour">시</label>
+        <input id="hour" type="number" placeholder="" />
+      </div>
+
+      <div>
+        <label for="minute">분</label>
+        <input id="minute" type="number" placeholder="" />
+      </div>
+
+      <div>
+        <label for="sex">성별</label>
+        <select id="sex">
+          <option value="M">남</option>
+          <option value="F">여</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="dohwaBase">도화 기준축</label>
+        <select id="dohwaBase">
+          <option value="day">일지</option>
+          <option value="year">년지</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="yeokmaBase">역마 기준축</label>
+        <select id="yeokmaBase">
+          <option value="day">일지</option>
+          <option value="year">년지</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="jisalBase">지살 기준축</label>
+        <select id="jisalBase">
+          <option value="day">일지</option>
+          <option value="year">년지</option>
+        </select>
+      </div>
+
+      <div class="full">
+        <button id="runBtn">조회하기</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>원국 정보</h2>
+      <div id="basicResult" class="result-box">아직 조회하지 않았습니다.</div>
+    </div>
+
+    <div class="section">
+      <h2>신살 결과</h2>
+      <div id="starsSummary" class="result-box">아직 조회하지 않았습니다.</div>
+      <div id="starsList"></div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = "https://astro-api-1qnc.onrender.com/api/v1/chinese/bazi";
+
+    const STEM_MAP = {
+      "甲": "갑", "乙": "을", "丙": "병", "丁": "정", "戊": "무",
+      "己": "기", "庚": "경", "辛": "신", "壬": "임", "癸": "계"
+    };
+
+    const BRANCH_MAP = {
+      "子": "자", "丑": "축", "寅": "인", "卯": "묘", "辰": "진", "巳": "사",
+      "午": "오", "未": "미", "申": "신", "酉": "유", "戌": "술", "亥": "해"
+    };
+
+    const STEM_WITH_ELEMENT = {
+      "갑": "갑목", "을": "을목", "병": "병화", "정": "정화", "무": "무토",
+      "기": "기토", "경": "경금", "신": "신금", "임": "임수", "계": "계수"
+    };
+
+    const BRANCH_WITH_ELEMENT = {
+      "자": "자수", "축": "축토", "인": "인목", "묘": "묘목", "진": "진토",
+      "사": "사화", "오": "오화", "미": "미토", "신": "신금", "유": "유금",
+      "술": "술토", "해": "해수"
+    };
+
+    const BRANCH_ANIMAL = {
+      "자": "쥐", "축": "소", "인": "호랑이", "묘": "토끼", "진": "용", "사": "뱀",
+      "오": "말", "미": "양", "신": "원숭이", "유": "닭", "술": "개", "해": "돼지"
+    };
+
+    const POSITION_NAMES = ["년지", "월지", "일지", "시지"];
+    const PILLAR_POSITION_NAMES = ["연주", "월주", "일주", "시주"];
+    const STEM_POSITION_NAMES = ["년간", "월간", "일간", "시간"];
+
+    function normalizePillars(apiData) {
+      const pillars = apiData.pillars;
+
+      const yearStem = STEM_MAP[pillars[0].gan];
+      const monthStem = STEM_MAP[pillars[1].gan];
+      const dayStem = STEM_MAP[pillars[2].gan];
+      const hourStem = STEM_MAP[pillars[3].gan];
+
+      const yearBranch = BRANCH_MAP[pillars[0].zhi];
+      const monthBranch = BRANCH_MAP[pillars[1].zhi];
+      const dayBranch = BRANCH_MAP[pillars[2].zhi];
+      const hourBranch = BRANCH_MAP[pillars[3].zhi];
+
+      return {
+        stems: [yearStem, monthStem, dayStem, hourStem],
+        branches: [yearBranch, monthBranch, dayBranch, hourBranch],
+        pillars: [
+          yearStem + yearBranch,
+          monthStem + monthBranch,
+          dayStem + dayBranch,
+          hourStem + hourBranch
+        ],
+        dayStem,
+        dayBranch,
+        yearStem,
+        yearBranch
+      };
+    }
+
+    function calcPairGrade(i, j) {
+      const includesDay = i === 2 || j === 2;
+      const isAdjacent = j === i + 1;
+
+      let grade = 1;
+      if (includesDay) grade = 2;
+      if (includesDay && isAdjacent) grade = 3;
+
+      return { includesDay, isAdjacent, grade };
+    }
+
+    function checkWonjin(branches) {
+      const wonjinPairs = new Set([
+        ["자", "미"].sort().join("-"),
+        ["축", "오"].sort().join("-"),
+        ["인", "유"].sort().join("-"),
+        ["묘", "신"].sort().join("-"),
+        ["진", "해"].sort().join("-"),
+        ["사", "술"].sort().join("-")
+      ]);
+
+      const items = [];
+
+      for (let i = 0; i < 4; i++) {
+        for (let j = i + 1; j < 4; j++) {
+          const pair = [branches[i], branches[j]].sort().join("-");
+          if (wonjinPairs.has(pair)) {
+            items.push({
+              positions: [POSITION_NAMES[i], POSITION_NAMES[j]],
+              chars: [branches[i], branches[j]],
+              ...calcPairGrade(i, j)
+            });
+          }
+        }
+      }
+
+      return { name: "원진살", total_count: items.length, items };
+    }
+
+    function checkGwimun(branches) {
+      const gwimunPairs = new Set([
+        ["자", "유"].sort().join("-"),
+        ["축", "오"].sort().join("-"),
+        ["인", "미"].sort().join("-"),
+        ["묘", "신"].sort().join("-"),
+        ["진", "해"].sort().join("-"),
+        ["사", "술"].sort().join("-")
+      ]);
+
+      const items = [];
+
+      for (let i = 0; i < 4; i++) {
+        for (let j = i + 1; j < 4; j++) {
+          const pair = [branches[i], branches[j]].sort().join("-");
+          if (gwimunPairs.has(pair)) {
+            items.push({
+              positions: [POSITION_NAMES[i], POSITION_NAMES[j]],
+              chars: [branches[i], branches[j]],
+              ...calcPairGrade(i, j)
+            });
+          }
+        }
+      }
+
+      return { name: "귀문살", total_count: items.length, items };
+    }
+
+    function checkBaekho(pillars) {
+      const baekhoSet = new Set(["갑진", "을미", "병술", "정축", "무진", "임술", "계축"]);
+      const items = [];
+
+      pillars.forEach((pillar, i) => {
+        if (baekhoSet.has(pillar)) {
+          items.push({
+            position: PILLAR_POSITION_NAMES[i],
+            pillar,
+            grade: i === 2 ? 2 : 1
+          });
+        }
+      });
+
+      return { name: "백호살", total_count: items.length, items };
+    }
+
+    function checkGoegang(dayPillar) {
+      const goegangSet = new Set(["임진", "경진", "경술", "무술"]);
+      const items = [];
+
+      if (goegangSet.has(dayPillar)) {
+        items.push({
+          position: "일주",
+          pillar: dayPillar,
+          grade: 3
+        });
+      }
+
+      return { name: "괴강살", total_count: items.length, items };
+    }
+
+    function checkHyeonchim(stems, branches) {
+      const hyeonchimStems = new Set(["갑", "신"]);
+      const hyeonchimBranches = new Set(["묘", "오", "미", "신"]);
+      const items = [];
+
+      stems.forEach((stem, i) => {
+        if (hyeonchimStems.has(stem)) {
+          items.push({
+            position: STEM_POSITION_NAMES[i],
+            char: stem
+          });
+        }
+      });
+
+      branches.forEach((branch, i) => {
+        if (hyeonchimBranches.has(branch)) {
+          items.push({
+            position: POSITION_NAMES[i],
+            char: branch
+          });
+        }
+      });
+
+      return { name: "현침살", total_count: items.length, items };
+    }
+
+    function getBaseBranch(saju, baseType) {
+      return baseType === "year" ? saju.yearBranch : saju.dayBranch;
+    }
+
+    function checkDohwa(branches, baseBranch, baseType) {
+      const dohwaMap = {
+        "인": "묘", "오": "묘", "술": "묘",
+        "신": "유", "자": "유", "진": "유",
+        "해": "자", "묘": "자", "미": "자",
+        "사": "오", "유": "오", "축": "오"
+      };
+
+      const target = dohwaMap[baseBranch];
+      const items = [];
+      const excludeIdx = baseType === "year" ? 0 : 2;
+
+      branches.forEach((branch, i) => {
+        if (i !== excludeIdx && branch === target) {
+          items.push({
+            position: POSITION_NAMES[i],
+            char: branch
+          });
+        }
+      });
+
+      return { name: "도화살", base: baseType, target, total_count: items.length, items };
+    }
+
+    function checkHongyeom(dayStem, branches) {
+      const hongyeomMap = {
+        "갑": ["오"],
+        "을": ["오"],
+        "병": ["인"],
+        "정": ["미"],
+        "무": ["진"],
+        "기": ["진"],
+        "경": ["술"],
+        "신": ["유"],
+        "임": ["신", "자"],
+        "계": ["신"]
+      };
+
+      const targets = hongyeomMap[dayStem] || [];
+      const items = [];
+
+      branches.forEach((branch, i) => {
+        if (targets.includes(branch)) {
+          items.push({
+            position: POSITION_NAMES[i],
+            char: branch
+          });
+        }
+      });
+
+      return { name: "홍염살", total_count: items.length, targets, items };
+    }
+
+    function checkYeokma(branches, baseBranch, baseType) {
+      const yeokmaMap = {
+        "인": "신", "오": "신", "술": "신",
+        "신": "인", "자": "인", "진": "인",
+        "해": "사", "묘": "사", "미": "사",
+        "사": "해", "유": "해", "축": "해"
+      };
+
+      const target = yeokmaMap[baseBranch];
+      const items = [];
+      const excludeIdx = baseType === "year" ? 0 : 2;
+
+      branches.forEach((branch, i) => {
+        if (i !== excludeIdx && branch === target) {
+          items.push({
+            position: POSITION_NAMES[i],
+            char: branch
+          });
+        }
+      });
+
+      return { name: "역마살", base: baseType, target, total_count: items.length, items };
+    }
+
+    function checkJisal(branches, baseBranch, baseType) {
+      const jisalMap = {
+        "인": "인", "오": "인", "술": "인",
+        "신": "신", "자": "신", "진": "신",
+        "해": "해", "묘": "해", "미": "해",
+        "사": "사", "유": "사", "축": "사"
+      };
+
+      const target = jisalMap[baseBranch];
+      const items = [];
+      const excludeIdx = baseType === "year" ? 0 : 2;
+
+      branches.forEach((branch, i) => {
+        if (i !== excludeIdx && branch === target) {
+          items.push({
+            position: POSITION_NAMES[i],
+            char: branch
+          });
+        }
+      });
+
+      return { name: "지살", base: baseType, target, total_count: items.length, items };
+    }
+
+    function runAllStars(saju, policy) {
+      const dohwaBase = getBaseBranch(saju, policy.dohwa_base);
+      const yeokmaBase = getBaseBranch(saju, policy.yeokma_base);
+      const jisalBase = getBaseBranch(saju, policy.jisal_base);
+
+      const stars = [
+        checkWonjin(saju.branches),
+        checkGwimun(saju.branches),
+        checkBaekho(saju.pillars),
+        checkGoegang(saju.pillars[2]),
+        checkHyeonchim(saju.stems, saju.branches),
+        checkDohwa(saju.branches, dohwaBase, policy.dohwa_base),
+        checkHongyeom(saju.dayStem, saju.branches),
+        checkYeokma(saju.branches, yeokmaBase, policy.yeokma_base),
+        checkJisal(saju.branches, jisalBase, policy.jisal_base)
+      ];
+
+      const totalStarCount = stars.reduce((sum, star) => sum + star.total_count, 0);
+
+      return { totalStarCount, stars };
+    }
+
+    function formatBasicResult(saju) {
+      return [
+        `연주: ${saju.pillars[0]}`,
+        `월주: ${saju.pillars[1]}`,
+        `일주: ${saju.pillars[2]}`,
+        `시주: ${saju.pillars[3]}`,
+        ``,
+        `일간: ${STEM_WITH_ELEMENT[saju.dayStem]} 일간`,
+        `일주: ${saju.pillars[2]} 일주`,
+        `일지: ${BRANCH_WITH_ELEMENT[saju.dayBranch]} 일지 (나의 동물: ${BRANCH_ANIMAL[saju.dayBranch]})`
+      ].join("\n");
+    }
+
+    function renderStars(result) {
+      const summary = document.getElementById("starsSummary");
+      const list = document.getElementById("starsList");
+
+      summary.textContent = `총 발견 개수: ${result.totalStarCount}`;
+      list.innerHTML = "";
+
+      result.stars.forEach((star) => {
+        const box = document.createElement("div");
+        box.className = "star-item";
+
+        const title = document.createElement("div");
+        title.innerHTML = `<b>${star.name}</b> (${star.total_count}개)`;
+        box.appendChild(title);
+
+        if (star.base) {
+          const base = document.createElement("div");
+          base.className = "muted";
+          base.textContent = `기준축: ${star.base} / 타겟: ${star.target ?? "-"}`;
+          box.appendChild(base);
+        }
+
+        if (star.targets) {
+          const targetLine = document.createElement("div");
+          targetLine.className = "muted";
+          targetLine.textContent = `타겟 지지: ${star.targets.join(", ")}`;
+          box.appendChild(targetLine);
+        }
+
+        if (star.total_count === 0) {
+          const none = document.createElement("div");
+          none.textContent = "- 없음";
+          none.style.marginTop = "8px";
+          box.appendChild(none);
+        } else {
+          const ul = document.createElement("ul");
+          ul.className = "inline-list";
+
+          star.items.forEach((item) => {
+            const li = document.createElement("li");
+            li.textContent = JSON.stringify(item, null, 0);
+            ul.appendChild(li);
+          });
+
+          box.appendChild(ul);
+        }
+
+        list.appendChild(box);
+      });
+    }
+
+    async function fetchSaju() {
+  const apiKey = document.getElementById("apiKey").value.trim();
+  const year = Number(document.getElementById("year").value);
+  const month = Number(document.getElementById("month").value);
+  const day = Number(document.getElementById("day").value);
+  const hour = Number(document.getElementById("hour").value);
+  const minute = Number(document.getElementById("minute").value);
+  const sex = document.getElementById("sex").value;
+
+  if (!apiKey) {
+    alert("API 키를 입력해 주세요.");
+    return;
+  }
+
+  const payload = {
+    year,
+    month,
+    day,
+    hour,
+    minute,
+    lat: 37.5665,
+    lng: 126.9780,
+    city: "Seoul",
+    sex,
+    time_standard: "civil",
+    include_pinyin: true,
+    include_stars: true,
+    include_interactions: true
+  };
+
+  console.log("[보내는 payload]", payload);
+
+  const headers = {
+    "Content-Type": "application/json",
+    "x-api-key": apiKey,
+    "Authorization": `Bearer ${apiKey}`
+  };
+
+  const response = await fetch(API_URL, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(payload)
+  });
+
+  const text = await response.text();
+  console.log("[응답 status]", response.status);
+  console.log("[응답 raw text]", text);
+
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch (e) {
+    alert(`응답 파싱 실패\nstatus: ${response.status}\nbody: ${text}`);
+    return;
+  }
+
+  if (!response.ok) {
+    alert(`API 호출 실패\nstatus: ${response.status}\nbody: ${JSON.stringify(data, null, 2)}`);
+    return;
+  }
+
+  if (!data.pillars) {
+    alert(`API 응답에 pillars가 없습니다.\n${JSON.stringify(data, null, 2)}`);
+    return;
+  }
+
+  const saju = normalizePillars(data);
+
+  const policy = {
+    dohwa_base: document.getElementById("dohwaBase").value,
+    yeokma_base: document.getElementById("yeokmaBase").value,
+    jisal_base: document.getElementById("jisalBase").value
+  };
+
+  const result = runAllStars(saju, policy);
+
+  document.getElementById("basicResult").textContent = formatBasicResult(saju);
+  renderStars(result);
+}
+
+    document.getElementById("runBtn").addEventListener("click", fetchSaju);
+  </script>
+</body>
+</html>
