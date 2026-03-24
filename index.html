@@ -208,6 +208,10 @@
     </div>
   </div>
 
+  <button onclick="runAllTests()">QA 테스트 실행</button>
+
+  <pre id="testResult"></pre>
+
   <script>
     const API_URL = "https://astro-api-1qnc.onrender.com/api/v1/chinese/bazi";
 
@@ -889,6 +893,123 @@
     }
 
     document.getElementById("runBtn").addEventListener("click", fetchSaju);
+
+function runAllTests() {
+  const testCases = [
+    {
+      name: "1. 방합 성립",
+      input: ["인","묘","진","오"],
+      expect: { banghap: 1, samhap: 0, yukhap: 0, chung: 0 }
+    },
+    {
+      name: "2. 방합 미성립",
+      input: ["인","묘","오","술"],
+      expect: { banghap: 0, samhap: 0, yukhap: 0, chung: 0 }
+    },
+    {
+      name: "3. 삼합 성립",
+      input: ["해","묘","미","오"],
+      expect: { banghap: 0, samhap: 1, yukhap: 0, chung: 0 }
+    },
+    {
+      name: "4. 삼합 미성립",
+      input: ["해","묘","오","술"],
+      expect: { banghap: 0, samhap: 0, yukhap: 0, chung: 0 }
+    },
+    {
+      name: "5. 육합 1개",
+      input: ["자","축","인","묘"],
+      expect: { yukhap: 1 }
+    },
+    {
+      name: "6. 육합 2개",
+      input: ["자","축","인","해"],
+      expect: { yukhap: 2 }
+    },
+    {
+      name: "7. 육합 중복",
+      input: ["오","미","오","미"],
+      expect: { yukhap: 4 }
+    },
+    {
+      name: "8. 충 1개",
+      input: ["자","오","인","진"],
+      expect: { chung: 1 }
+    },
+    {
+      name: "9. 충 2개",
+      input: ["자","오","인","신"],
+      expect: { chung: 2 }
+    },
+    {
+      name: "10. 충 중복",
+      input: ["자","오","자","오"],
+      expect: { chung: 4 }
+    },
+    {
+      name: "11. 합+충",
+      input: ["자","축","오","미"],
+      expect: { yukhap: 2, chung: 2 }
+    },
+    {
+      name: "12. 방합+육합",
+      input: ["해","자","축","인"],
+      expect: { banghap: 1, yukhap: 1 }
+    },
+    {
+      name: "13. 삼합",
+      input: ["사","유","축","오"],
+      expect: { samhap: 1 }
+    },
+    {
+      name: "14. 아무것도 없음",
+      input: ["자","인","진","미"],
+      expect: { banghap: 0, samhap: 0, yukhap: 0, chung: 0 }
+    }
+  ];
+
+  let output = "";
+
+  testCases.forEach(tc => {
+    const saju = {
+      branches: tc.input,
+      dayBranch: tc.input[2],
+      yearBranch: tc.input[0],
+      pillars: ["","","",""]
+    };
+
+    const result = runAllStars(saju);
+
+    // 결과에서 필요한 값만 추출
+    const getCount = (name) => {
+      const found = result.find(r => r.name.includes(name));
+      return found ? found.total_count : 0;
+    };
+
+    const actual = {
+      banghap: getCount("방합"),
+      samhap: getCount("삼합"),
+      yukhap: getCount("육합"),
+      chung: getCount("충")
+    };
+
+    let pass = true;
+
+    for (let key in tc.expect) {
+      if (actual[key] !== tc.expect[key]) {
+        pass = false;
+      }
+    }
+
+    output += `${tc.name}\n`;
+    output += `입력: ${tc.input.join(", ")}\n`;
+    output += `결과: ${JSON.stringify(actual)}\n`;
+    output += `기대: ${JSON.stringify(tc.expect)}\n`;
+    output += pass ? "✅ PASS\n\n" : "❌ FAIL\n\n";
+  });
+
+  document.getElementById("testResult").textContent = output;
+}
   </script>
 </body>
 </html>
