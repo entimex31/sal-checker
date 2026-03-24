@@ -165,6 +165,7 @@
         <select id="dohwaBase">
           <option value="day">일지</option>
           <option value="year">년지</option>
+          <option value="month">월지</option>
         </select>
       </div>
 
@@ -281,8 +282,10 @@
     }
 
     function getBaseBranch(saju, baseType) {
-      return baseType === "year" ? saju.yearBranch : saju.dayBranch;
-    }
+  if (baseType === "year") return saju.yearBranch;
+  if (baseType === "month") return saju.branches[1];
+  return saju.dayBranch;
+}
 
     // =========================
     // 신살
@@ -361,20 +364,22 @@
       return { name: "백호살", total_count: items.length, items };
     }
 
-    function checkGoegang(dayPillar) {
-      const goegangSet = new Set(["임진", "경진", "경술", "무술"]);
-      const items = [];
+    function checkGoegang(pillars) {
+  const goegangSet = new Set(["임진", "경진", "경술", "무술"]);
+  const items = [];
 
-      if (goegangSet.has(dayPillar)) {
-        items.push({
-          position: "일주",
-          pillar: dayPillar,
-          grade: 3
-        });
-      }
-
-      return { name: "괴강살", total_count: items.length, items };
+  pillars.forEach((pillar, i) => {
+    if (goegangSet.has(pillar)) {
+      items.push({
+        position: PILLAR_POSITION_NAMES[i],
+        pillar,
+        grade: i === 2 ? 3 : 1
+      });
     }
+  });
+
+  return { name: "괴강살", total_count: items.length, items };
+}
 
     function checkHyeonchim(stems, branches) {
       const hyeonchimStems = new Set(["갑", "신"]);
@@ -512,7 +517,7 @@
         checkWonjin(saju.branches),
         checkGwimun(saju.branches),
         checkBaekho(saju.pillars),
-        checkGoegang(saju.pillars[2]),
+        checkGoegang(saju.pillars),
         checkHyeonchim(saju.stems, saju.branches),
         checkDohwa(saju.branches, dohwaBase, policy.dohwa_base),
         checkHongyeom(saju.dayStem, saju.branches),
@@ -612,37 +617,36 @@
     }
 
     function checkYukhap(branches) {
-      const userSet = new Set(branches);
-      const posMap = branchPositionsMap(branches);
+  const yukhapPairs = new Set([
+    ["자", "축"].sort().join("-"),
+    ["인", "해"].sort().join("-"),
+    ["묘", "술"].sort().join("-"),
+    ["진", "유"].sort().join("-"),
+    ["사", "신"].sort().join("-"),
+    ["오", "미"].sort().join("-")
+  ]);
 
-      const yukhapPairs = {
-        "자축합": new Set(["자", "축"]),
-        "인해합": new Set(["인", "해"]),
-        "묘술합": new Set(["묘", "술"]),
-        "진유합": new Set(["진", "유"]),
-        "사신합": new Set(["사", "신"]),
-        "오미합": new Set(["오", "미"])
-      };
+  const items = [];
 
-      const items = [];
-
-      Object.entries(yukhapPairs).forEach(([name, requiredSet]) => {
-        const ok = Array.from(requiredSet).every(v => userSet.has(v));
-        if (ok) {
-          items.push({
-            name,
-            chars: Array.from(requiredSet),
-            details: getSetPositions(requiredSet, posMap)
-          });
-        }
-      });
-
-      return {
-        name: "육합",
-        total_count: items.length,
-        items
-      };
+  for (let i = 0; i < 4; i++) {
+    for (let j = i + 1; j < 4; j++) {
+      const pair = [branches[i], branches[j]].sort().join("-");
+      if (yukhapPairs.has(pair)) {
+        items.push({
+          pair: [branches[i], branches[j]].join("-"),
+          positions: [POSITION_NAMES[i], POSITION_NAMES[j]],
+          is_adjacent: j === i + 1
+        });
+      }
     }
+  }
+
+  return {
+    name: "육합",
+    total_count: items.length,
+    items
+  };
+}
 
     function checkChung(branches) {
       const chungPairs = new Set([
@@ -830,7 +834,7 @@
         lng: 126.9780,
         city: "Seoul",
         sex,
-        time_standard: "civil",
+        time_standard: "true_solar",
         include_pinyin: true,
         include_stars: true,
         include_interactions: true
