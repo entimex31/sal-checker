@@ -895,80 +895,31 @@
     }
 
     document.getElementById("runBtn").addEventListener("click", fetchSaju);
-
+  </script>
+<script>
 function runAllTests() {
   const testCases = [
-    {
-      name: "1. 방합 성립",
-      input: ["인","묘","진","오"],
-      expect: { banghap: 1, samhap: 0, yukhap: 0, chung: 0 }
-    },
-    {
-      name: "2. 방합 미성립",
-      input: ["인","묘","오","술"],
-      expect: { banghap: 0, samhap: 0, yukhap: 0, chung: 0 }
-    },
-    {
-      name: "3. 삼합 성립",
-      input: ["해","묘","미","오"],
-      expect: { banghap: 0, samhap: 1, yukhap: 0, chung: 0 }
-    },
-    {
-      name: "4. 삼합 미성립",
-      input: ["해","묘","오","술"],
-      expect: { banghap: 0, samhap: 0, yukhap: 0, chung: 0 }
-    },
-    {
-      name: "5. 육합 1개",
-      input: ["자","축","인","묘"],
-      expect: { yukhap: 1 }
-    },
-    {
-      name: "6. 육합 2개",
-      input: ["자","축","인","해"],
-      expect: { yukhap: 2 }
-    },
-    {
-      name: "7. 육합 중복",
-      input: ["오","미","오","미"],
-      expect: { yukhap: 4 }
-    },
-    {
-      name: "8. 충 1개",
-      input: ["자","오","인","진"],
-      expect: { chung: 1 }
-    },
-    {
-      name: "9. 충 2개",
-      input: ["자","오","인","신"],
-      expect: { chung: 2 }
-    },
-    {
-      name: "10. 충 중복",
-      input: ["자","오","자","오"],
-      expect: { chung: 4 }
-    },
-    {
-      name: "11. 합+충",
-      input: ["자","축","오","미"],
-      expect: { yukhap: 2, chung: 2 }
-    },
-    {
-      name: "12. 방합+육합",
-      input: ["해","자","축","인"],
-      expect: { banghap: 1, yukhap: 1 }
-    },
-    {
-      name: "13. 삼합",
-      input: ["사","유","축","오"],
-      expect: { samhap: 1 }
-    },
-    {
-      name: "14. 아무것도 없음",
-      input: ["자","인","진","미"],
-      expect: { banghap: 0, samhap: 0, yukhap: 0, chung: 0 }
-    }
+    { name: "1. 방합 성립", input: ["인","묘","진","오"], expect: { banghap: 1, samhap: 0, yukhap: 0, chung: 0 } },
+    { name: "2. 방합 미성립", input: ["인","묘","오","술"], expect: { banghap: 0, samhap: 0, yukhap: 0, chung: 0 } },
+    { name: "3. 삼합 성립", input: ["해","묘","미","오"], expect: { banghap: 0, samhap: 1, yukhap: 0, chung: 0 } },
+    { name: "4. 삼합 미성립", input: ["해","묘","오","술"], expect: { banghap: 0, samhap: 0, yukhap: 0, chung: 0 } },
+    { name: "5. 육합 1개", input: ["자","축","인","묘"], expect: { banghap: 0, samhap: 0, yukhap: 1, chung: 0 } },
+    { name: "6. 육합 2개", input: ["자","축","인","해"], expect: { banghap: 0, samhap: 0, yukhap: 2, chung: 0 } },
+    { name: "7. 육합 중복", input: ["오","미","오","미"], expect: { banghap: 0, samhap: 0, yukhap: 4, chung: 0 } },
+    { name: "8. 충 1개", input: ["자","오","인","진"], expect: { banghap: 0, samhap: 0, yukhap: 0, chung: 1 } },
+    { name: "9. 충 2개", input: ["자","오","인","신"], expect: { banghap: 0, samhap: 0, yukhap: 0, chung: 2 } },
+    { name: "10. 충 중복", input: ["자","오","자","오"], expect: { banghap: 0, samhap: 0, yukhap: 0, chung: 4 } },
+    { name: "11. 합+충", input: ["자","축","오","미"], expect: { banghap: 0, samhap: 0, yukhap: 2, chung: 2 } },
+    { name: "12. 방합+육합", input: ["해","자","축","인"], expect: { banghap: 1, samhap: 0, yukhap: 1, chung: 0 } },
+    { name: "13. 삼합", input: ["사","유","축","오"], expect: { banghap: 0, samhap: 1, yukhap: 0, chung: 0 } },
+    { name: "14. 아무것도 없음", input: ["자","인","진","미"], expect: { banghap: 0, samhap: 0, yukhap: 0, chung: 0 } }
   ];
+
+  const resultEl = document.getElementById("testResult");
+  if (!resultEl) {
+    alert("testResult 영역이 없습니다. HTML에 <pre id='testResult'></pre>를 추가해 주세요.");
+    return;
+  }
 
   let output = "";
 
@@ -977,14 +928,16 @@ function runAllTests() {
       branches: tc.input,
       dayBranch: tc.input[2],
       yearBranch: tc.input[0],
-      pillars: ["","","",""]
+      pillars: ["","","",""],
+      stems: ["","","",""],
+      dayStem: ""
     };
 
-    const result = runAllStars(saju);
+    // 합충 전용 함수 호출
+    const result = runAllHapChung(saju);
 
-    // 결과에서 필요한 값만 추출
-    const getCount = (name) => {
-      const found = result.find(r => r.name.includes(name));
+    const getCount = (groupName) => {
+      const found = result.results.find(r => r.name === groupName);
       return found ? found.total_count : 0;
     };
 
@@ -996,8 +949,7 @@ function runAllTests() {
     };
 
     let pass = true;
-
-    for (let key in tc.expect) {
+    for (const key in tc.expect) {
       if (actual[key] !== tc.expect[key]) {
         pass = false;
       }
@@ -1007,11 +959,11 @@ function runAllTests() {
     output += `입력: ${tc.input.join(", ")}\n`;
     output += `결과: ${JSON.stringify(actual)}\n`;
     output += `기대: ${JSON.stringify(tc.expect)}\n`;
-    output += pass ? "✅ PASS\n\n" : "❌ FAIL\n\n";
+    output += `${pass ? "✅ PASS" : "❌ FAIL"}\n\n`;
   });
 
-  document.getElementById("testResult").textContent = output;
+  resultEl.textContent = output;
 }
-  </script>
+</script>
 </body>
 </html>
