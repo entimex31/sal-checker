@@ -414,28 +414,47 @@
     }
 
     function checkDohwa(branches, baseBranch, baseType) {
-      const dohwaMap = {
-        "인": "묘", "오": "묘", "술": "묘",
-        "신": "유", "자": "유", "진": "유",
-        "해": "자", "묘": "자", "미": "자",
-        "사": "오", "유": "오", "축": "오"
-      };
+  const dohwaMap = {
+    "인": "묘", "오": "묘", "술": "묘",
+    "신": "유", "자": "유", "진": "유",
+    "해": "자", "묘": "자", "미": "자",
+    "사": "오", "유": "오", "축": "오"
+  };
 
-      const target = dohwaMap[baseBranch];
-      const items = [];
-      const excludeIdx = baseType === "year" ? 0 : 2;
+  const items = [];
 
-      branches.forEach((branch, i) => {
-        if (i !== excludeIdx && branch === target) {
-          items.push({
-            position: POSITION_NAMES[i],
-            char: branch
-          });
-        }
+  // 1. 기존 로직: 기준축으로 타겟 글자 찾아서 다른 지지에서 검사
+  const target = dohwaMap[baseBranch];
+  const excludeIdx = baseType === "year" ? 0 : (baseType === "month" ? 1 : 2);
+
+  branches.forEach((branch, i) => {
+    if (i !== excludeIdx && branch === target) {
+      items.push({
+        type: "기준축 매핑",
+        position: POSITION_NAMES[i],
+        char: branch
       });
-
-      return { name: "도화살", base: baseType, target, total_count: items.length, items };
     }
+  });
+
+  // 2. 추가 로직: 일지 자체가 자/오/묘/유면 도화 +1
+  const dayBranch = branches[2];
+  if (["자", "오", "묘", "유"].includes(dayBranch)) {
+    items.push({
+      type: "일지 자체 도화",
+      position: "일지",
+      char: dayBranch
+    });
+  }
+
+  return {
+    name: "도화살",
+    base: baseType,
+    target,
+    total_count: items.length,
+    items
+  };
+}
 
     function checkHongyeom(dayStem, branches) {
       const hongyeomMap = {
@@ -467,28 +486,47 @@
     }
 
     function checkYeokma(branches, baseBranch, baseType) {
-      const yeokmaMap = {
-        "인": "신", "오": "신", "술": "신",
-        "신": "인", "자": "인", "진": "인",
-        "해": "사", "묘": "사", "미": "사",
-        "사": "해", "유": "해", "축": "해"
-      };
+  const yeokmaMap = {
+    "인": "신", "오": "신", "술": "신",
+    "신": "인", "자": "인", "진": "인",
+    "해": "사", "묘": "사", "미": "사",
+    "사": "해", "유": "해", "축": "해"
+  };
 
-      const target = yeokmaMap[baseBranch];
-      const items = [];
-      const excludeIdx = baseType === "year" ? 0 : 2;
+  const items = [];
 
-      branches.forEach((branch, i) => {
-        if (i !== excludeIdx && branch === target) {
-          items.push({
-            position: POSITION_NAMES[i],
-            char: branch
-          });
-        }
+  // 1. 기존 로직: 기준축으로 타겟 글자 찾아서 다른 지지에서 검사
+  const target = yeokmaMap[baseBranch];
+  const excludeIdx = baseType === "year" ? 0 : (baseType === "month" ? 1 : 2);
+
+  branches.forEach((branch, i) => {
+    if (i !== excludeIdx && branch === target) {
+      items.push({
+        type: "기준축 매핑",
+        position: POSITION_NAMES[i],
+        char: branch
       });
-
-      return { name: "역마살", base: baseType, target, total_count: items.length, items };
     }
+  });
+
+  // 2. 추가 로직: 일지 자체가 인/신/사/해면 역마 +1
+  const dayBranch = branches[2];
+  if (["인", "신", "사", "해"].includes(dayBranch)) {
+    items.push({
+      type: "일지 자체 역마",
+      position: "일지",
+      char: dayBranch
+    });
+  }
+
+  return {
+    name: "역마살",
+    base: baseType,
+    target,
+    total_count: items.length,
+    items
+  };
+}
 
     function checkJisal(branches, baseBranch, baseType) {
       const jisalMap = {
