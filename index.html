@@ -900,26 +900,22 @@
 function runAllTests() {
   const testCases = [
     { name: "1. 방합 성립", input: ["인","묘","진","오"], expect: { banghap: 1, samhap: 0, yukhap: 0, chung: 0 } },
-    { name: "2. 방합 미성립", input: ["인","묘","오","술"], expect: { banghap: 0, samhap: 0, yukhap: 0, chung: 0 } },
-    { name: "3. 삼합 성립", input: ["해","묘","미","오"], expect: { banghap: 0, samhap: 1, yukhap: 0, chung: 0 } },
-    { name: "4. 삼합 미성립", input: ["해","묘","오","술"], expect: { banghap: 0, samhap: 0, yukhap: 0, chung: 0 } },
+    { name: "2. 방합 미성립 + 삼합/육합 성립", input: ["인","묘","오","술"], expect: { banghap: 0, samhap: 1, yukhap: 1, chung: 0 } },
+    { name: "3. 삼합 성립 + 육합 성립", input: ["해","묘","미","오"], expect: { banghap: 0, samhap: 1, yukhap: 1, chung: 0 } },
+    { name: "4. 삼합 미성립 + 육합 성립", input: ["해","묘","오","술"], expect: { banghap: 0, samhap: 0, yukhap: 1, chung: 0 } },
     { name: "5. 육합 1개", input: ["자","축","인","묘"], expect: { banghap: 0, samhap: 0, yukhap: 1, chung: 0 } },
-    { name: "6. 육합 2개", input: ["자","축","인","해"], expect: { banghap: 0, samhap: 0, yukhap: 2, chung: 0 } },
-    { name: "7. 육합 중복", input: ["오","미","오","미"], expect: { banghap: 0, samhap: 0, yukhap: 4, chung: 0 } },
+    { name: "6. 육합 2개 + 방합 1개", input: ["자","축","인","해"], expect: { banghap: 1, samhap: 0, yukhap: 2, chung: 0 } },
+    { name: "7. 육합 중복 4개", input: ["오","미","오","미"], expect: { banghap: 0, samhap: 0, yukhap: 4, chung: 0 } },
     { name: "8. 충 1개", input: ["자","오","인","진"], expect: { banghap: 0, samhap: 0, yukhap: 0, chung: 1 } },
     { name: "9. 충 2개", input: ["자","오","인","신"], expect: { banghap: 0, samhap: 0, yukhap: 0, chung: 2 } },
-    { name: "10. 충 중복", input: ["자","오","자","오"], expect: { banghap: 0, samhap: 0, yukhap: 0, chung: 4 } },
-    { name: "11. 합+충", input: ["자","축","오","미"], expect: { banghap: 0, samhap: 0, yukhap: 2, chung: 2 } },
-    { name: "12. 방합+육합", input: ["해","자","축","인"], expect: { banghap: 1, samhap: 0, yukhap: 1, chung: 0 } },
-    { name: "13. 삼합", input: ["사","유","축","오"], expect: { banghap: 0, samhap: 1, yukhap: 0, chung: 0 } },
+    { name: "10. 충 중복 4개", input: ["자","오","자","오"], expect: { banghap: 0, samhap: 0, yukhap: 0, chung: 4 } },
+    { name: "11. 합+충 동시", input: ["자","축","오","미"], expect: { banghap: 0, samhap: 0, yukhap: 2, chung: 2 } },
+    { name: "12. 방합 1개 + 육합 2개", input: ["해","자","축","인"], expect: { banghap: 1, samhap: 0, yukhap: 2, chung: 0 } },
+    { name: "13. 삼합 1개", input: ["사","유","축","오"], expect: { banghap: 0, samhap: 1, yukhap: 0, chung: 0 } },
     { name: "14. 아무것도 없음", input: ["자","인","진","미"], expect: { banghap: 0, samhap: 0, yukhap: 0, chung: 0 } }
   ];
 
   const resultEl = document.getElementById("testResult");
-  if (!resultEl) {
-    alert("testResult 영역이 없습니다. HTML에 <pre id='testResult'></pre>를 추가해 주세요.");
-    return;
-  }
 
   let output = "";
 
@@ -933,7 +929,6 @@ function runAllTests() {
       dayStem: ""
     };
 
-    // 합충 전용 함수 호출
     const result = runAllHapChung(saju);
 
     const getCount = (groupName) => {
@@ -942,24 +937,32 @@ function runAllTests() {
     };
 
     const actual = {
-      banghap: getCount("방합"),
-      samhap: getCount("삼합"),
-      yukhap: getCount("육합"),
-      chung: getCount("충")
+      방합: getCount("방합"),
+      삼합: getCount("삼합"),
+      육합: getCount("육합"),
+      충: getCount("충")
+    };
+
+    const expected = {
+      방합: tc.expect.banghap,
+      삼합: tc.expect.samhap,
+      육합: tc.expect.yukhap,
+      충: tc.expect.chung
     };
 
     let pass = true;
-    for (const key in tc.expect) {
-      if (actual[key] !== tc.expect[key]) {
+    for (const key in expected) {
+      if (actual[key] !== expected[key]) {
         pass = false;
       }
     }
 
-    output += `${tc.name}\n`;
+    output += `📌 ${tc.name}\n`;
     output += `입력: ${tc.input.join(", ")}\n`;
-    output += `결과: ${JSON.stringify(actual)}\n`;
-    output += `기대: ${JSON.stringify(tc.expect)}\n`;
-    output += `${pass ? "✅ PASS" : "❌ FAIL"}\n\n`;
+    output += `결과 → 방합 ${actual.방합} | 삼합 ${actual.삼합} | 육합 ${actual.육합} | 충 ${actual.충}\n`;
+    output += `기대 → 방합 ${expected.방합} | 삼합 ${expected.삼합} | 육합 ${expected.육합} | 충 ${expected.충}\n`;
+    output += `${pass ? "✅ PASS" : "❌ FAIL"}\n`;
+    output += `────────────────────────\n\n`;
   });
 
   resultEl.textContent = output;
